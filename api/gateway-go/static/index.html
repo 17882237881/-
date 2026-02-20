@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gemini-like Chat</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(20, 26, 48, 0.68);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --text: #e9eefc;
+      --muted: #9eabcf;
+      --accent-a: #4f8cff;
+      --accent-b: #7c5cff;
+      --user: #1b223b;
+      --assistant: #121a31;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 10% 10%, #1d2650 0%, transparent 60%),
+        radial-gradient(900px 700px at 90% 0%, #261f58 0%, transparent 60%),
+        var(--bg);
+      display: grid;
+      grid-template-columns: 260px 1fr;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--panel-border);
+      background: rgba(8, 12, 24, 0.72);
+      backdrop-filter: blur(8px);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+      box-shadow: 0 0 18px rgba(124, 92, 255, 0.9);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .new-chat {
+      margin-top: 14px;
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .shell {
+      width: min(980px, 100%);
+      height: min(88vh, 900px);
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+    }
+
+    .topbar {
+      border-bottom: 1px solid var(--panel-border);
+      padding: 16px 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .messages {
+      padding: 22px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .bubble {
+      max-width: 78%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid var(--panel-border);
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--user);
+    }
+
+    .bubble.assistant {
+      align-self: flex-start;
+      background: var(--assistant);
+    }
+
+    .composer {
+      border-top: 1px solid var(--panel-border);
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      background: rgba(8, 12, 24, 0.6);
+    }
+
+    .composer input {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .composer input:focus {
+      border-color: rgba(124, 92, 255, 0.7);
+      box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2);
+    }
+
+    .composer button {
+      border: 0;
+      border-radius: 14px;
+      padding: 0 18px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+      box-shadow: 0 8px 26px rgba(79, 140, 255, 0.35);
+    }
+
+    .composer button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 900px) {
+      body { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main { padding: 10px; }
+      .shell { height: 96vh; border-radius: 16px; }
+      .bubble { max-width: 92%; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="dot"></span> Gemini Clone</div>
+    <div class="hint">对标 Gemini 风格的学习版对话界面，支持实时流式回复。</div>
+    <div class="new-chat">✨ 新建聊天（Demo）</div>
+  </aside>
+
+  <main class="main">
+    <section class="shell">
+      <div class="topbar">Gemini · Chat Preview</div>
+      <div id="messages" class="messages">
+        <div class="bubble assistant">你好，我是你的 AI 助手。可以直接开始提问～</div>
+      </div>
+      <form id="composer" class="composer">
+        <input id="prompt" placeholder="给 Gemini Clone 发送消息" autocomplete="off" />
+        <button id="send" type="submit">发送</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const promptInput = document.getElementById('prompt');
+    const sendBtn = document.getElementById('send');
+    const composer = document.getElementById('composer');
+
+    function addBubble(text, role) {
+      const div = document.createElement('div');
+      div.className = `bubble ${role}`;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    }
+
+    composer.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      addBubble(prompt, 'user');
+      const assistantBubble = addBubble('', 'assistant');
+      promptInput.value = '';
+      sendBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: 'demo', prompt }),
+        });
+
+        if (!res.ok) throw new Error(`send failed: ${res.status}`);
+        const data = await res.json();
+        const es = new EventSource('/api/chat/stream?request_id=' + data.request_id);
+
+        es.onmessage = (evt) => {
+          if (evt.data && evt.data !== '[DONE]') assistantBubble.textContent += evt.data;
+          messages.scrollTop = messages.scrollHeight;
+        };
+
+        es.addEventListener('done', () => {
+          es.close();
+          sendBtn.disabled = false;
+          promptInput.focus();
+        });
+
+        es.onerror = () => {
+          assistantBubble.textContent += '\n[流式连接中断]';
+          es.close();
+          sendBtn.disabled = false;
+        };
+      } catch (err) {
+        assistantBubble.textContent = '请求失败：' + err.message;
+        sendBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
