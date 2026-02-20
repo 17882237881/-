@@ -1,0 +1,13 @@
+FROM golang:1.22-alpine AS build
+WORKDIR /app
+COPY go.mod ./
+RUN go mod download
+COPY . .
+ARG SERVICE
+RUN go build -o /out/service ./cmd/${SERVICE}
+
+FROM alpine:3.20
+WORKDIR /app
+COPY --from=build /out/service /app/service
+COPY api/gateway-go/static /app/api/gateway-go/static
+CMD ["/app/service"]

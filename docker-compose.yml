@@ -1,0 +1,40 @@
+services:
+  chat-command:
+    build:
+      context: .
+      dockerfile: Dockerfile.golang
+      args: { SERVICE: chat-command }
+    environment:
+      - DATA_DIR=/data
+      - PORT=8081
+    volumes: ["./data:/data"]
+
+  chat-query:
+    build:
+      context: .
+      dockerfile: Dockerfile.golang
+      args: { SERVICE: chat-query }
+    environment:
+      - DATA_DIR=/data
+      - PORT=8082
+    volumes: ["./data:/data"]
+
+  llm-worker:
+    build:
+      context: .
+      dockerfile: services/llm-worker-py/Dockerfile
+    environment:
+      - DATA_DIR=/data
+    volumes: ["./data:/data"]
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.golang
+      args: { SERVICE: gateway }
+    environment:
+      - PORT=8080
+      - CHAT_COMMAND_URL=http://chat-command:8081/submit
+      - CHAT_QUERY_URL=http://chat-query:8082/stream
+    ports: ["8080:8080"]
+    depends_on: [chat-command, chat-query, llm-worker]
